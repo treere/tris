@@ -5,6 +5,7 @@ defmodule Tris.GameServer do
   alias Tris.BotPlayer
 
   @bot_move_delay 800
+  @turn_timeout 30_000
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: via_tuple(args.game_id))
@@ -45,9 +46,13 @@ defmodule Tris.GameServer do
       status: :playing,
       winner: nil,
       winning_cells: [],
-      bot_difficulty: Map.get(args, :bot_difficulty)
+      bot_difficulty: Map.get(args, :bot_difficulty),
+      timer_ref: nil,
+      turn_started_at: nil,
+      timeout_player: nil
     }
 
+    state = start_timer(state)
     {:ok, state}
   end
 
@@ -85,6 +90,27 @@ defmodule Tris.GameServer do
     {:noreply, new_state}
   end
 
+  @impl true
+  def handle_info({:turn_timeout, player}, state) do
+    if state.status == :playing and state.turn == player do
+      opponent = if player == :x, do: :o, else: :x
+
+      new_state = %{
+        state
+        | status: :won,
+          winner: opponent,
+          timeout_player: player,
+          timer_ref: nil,
+          turn_started_at: nil
+      }
+
+      broadcast_update(new_state)
+      {:noreply, new_state}
+    else
+      {:noreply, state}
+    end
+  end
+
   defp is_bot_turn?(state) do
     state.bot_difficulty != nil and state.players[state.turn] == :bot
   end
@@ -97,7 +123,25 @@ defmodule Tris.GameServer do
     state
   end
 
+  defp start_timer(state) do
+    if state.status == :playing and not is_bot_turn?(state) do
+      timer_ref = Process.send_after(self(), {:turn_timeout, state.turn}, @turn_timeout)
+      %{state | timer_ref: timer_ref, turn_started_at: System.monotonic_time()}
+    else
+      %{state | timer_ref: nil, turn_started_at: nil}
+    end
+  end
+
+  defp cancel_timer(state) do
+    if state.timer_ref do
+      Process.cancel_timer(state.timer_ref)
+    end
+
+    %{state | timer_ref: nil}
+  end
+
   defp apply_move(state, row, col, player \\ nil) do
+    state = cancel_timer(state)
     player = player || state.turn
     new_board = Map.put(state.board, {row, col}, player)
     next_turn = if player == :x, do: :o, else: :x
@@ -113,8 +157,16 @@ defmodule Tris.GameServer do
         turn: next_turn,
         status: status,
         winner: if(won, do: player, else: nil),
-        winning_cells: winning_cells
+        winning_cells: winning_cells,
+        timeout_player: nil
     }
+
+    new_state =
+      if new_state.status == :playing do
+        start_timer(new_state)
+      else
+        new_state
+      end
 
     broadcast_update(new_state)
     new_state

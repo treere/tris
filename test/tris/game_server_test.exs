@@ -21,6 +21,11 @@ defmodule Tris.GameServerTest do
     %{game_id: game_id}
   end
 
+  defp game_pid(game_id) do
+    [{pid, _}] = Registry.lookup(Tris.GameRegistry, game_id)
+    pid
+  end
+
   describe "bot game integration" do
     setup do
       bot_game_id = "bot-test-#{System.unique_integer([:positive])}"
@@ -57,6 +62,20 @@ defmodule Tris.GameServerTest do
       assert state.bot_difficulty == :hard
       assert state.players[:o] == :bot
     end
+
+    test "timer starts for human (X) on init", %{game_id: game_id} do
+      state = GameServer.get_state(game_id)
+      assert state.timer_ref != nil
+      assert state.turn_started_at != nil
+    end
+
+    test "timer is nil for bot turn after human moves", %{game_id: game_id} do
+      GameServer.make_move(game_id, self(), 0, 0)
+      state = GameServer.get_state(game_id)
+      assert state.turn == :o
+      assert state.timer_ref == nil
+      assert state.turn_started_at == nil
+    end
   end
 
   describe "make_move/4" do
@@ -84,6 +103,41 @@ defmodule Tris.GameServerTest do
 
       assert state.status == :won
       assert state.winner == :x
+    end
+
+    test "timer starts on init for human player", %{game_id: game_id} do
+      state = GameServer.get_state(game_id)
+      assert state.timer_ref != nil
+      assert state.turn_started_at != nil
+    end
+
+    test "forfeits player on timeout", %{game_id: game_id} do
+      state = GameServer.get_state(game_id)
+      assert state.turn == :x
+
+      pid = game_pid(game_id)
+      send(pid, {:turn_timeout, :x})
+
+      _ = :sys.get_state(pid)
+
+      state = GameServer.get_state(game_id)
+      assert state.status == :won
+      assert state.winner == :o
+      assert state.timeout_player == :x
+    end
+
+    test "forfeit only triggers for current player", %{game_id: game_id} do
+      GameServer.make_move(game_id, self(), 0, 0)
+      state = GameServer.get_state(game_id)
+      assert state.turn == :o
+
+      pid = game_pid(game_id)
+      send(pid, {:turn_timeout, :x})
+
+      _ = :sys.get_state(pid)
+      state = GameServer.get_state(game_id)
+      assert state.status == :playing
+      assert state.winner == nil
     end
 
     test "detects tie", %{game_id: game_id} do

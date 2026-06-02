@@ -4,6 +4,8 @@ defmodule TrisWeb.GameLive do
   alias Tris.GameServer
   alias Phoenix.PubSub
 
+  @turn_timeout 30
+
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
@@ -34,6 +36,9 @@ defmodule TrisWeb.GameLive do
       |> assign(:my_name, game_state.names[player_mark] || params["n"])
       |> assign(:opponent_name, game_state.names[opponent_mark] || params["o"])
       |> assign(:result, nil)
+      |> assign(:remaining_seconds, calc_remaining(game_state))
+
+    start_timer_tick(socket, game_state)
 
     {:noreply, socket}
   end
@@ -43,15 +48,24 @@ defmodule TrisWeb.GameLive do
 
     result =
       cond do
-        game_state.status == :won -> "#{game_state.names[game_state.winner]} wins!"
-        game_state.status == :tie -> "It's a tie!"
-        true -> nil
+        game_state.status == :won and game_state.timeout_player ->
+          "#{game_state.names[game_state.timeout_player]} ran out of time!"
+
+        game_state.status == :won ->
+          "#{game_state.names[game_state.winner]} wins!"
+
+        game_state.status == :tie ->
+          "It's a tie!"
+
+        true ->
+          nil
       end
 
     socket =
       socket
       |> assign(:game_state, game_state)
       |> assign(:is_my_turn, game_state.turn == socket.assigns.player_mark)
+      |> assign(:remaining_seconds, calc_remaining(game_state))
       |> assign(:result, result)
 
     if result != nil and previous_result == nil do
@@ -63,6 +77,47 @@ defmodule TrisWeb.GameLive do
 
   def handle_info(:redirect_to_lobby, socket) do
     {:noreply, push_navigate(socket, to: ~p"/?username=#{socket.assigns.my_name}")}
+  end
+
+  def handle_info(:timer_tick, socket) do
+    game_state = socket.assigns.game_state
+
+    if game_state.status == :playing do
+      remaining = calc_remaining(game_state)
+
+      socket =
+        if remaining != socket.assigns.remaining_seconds do
+          assign(socket, :remaining_seconds, remaining)
+        else
+          socket
+        end
+
+      if remaining > 0 do
+        Process.send_after(self(), :timer_tick, 1000)
+      end
+
+      {:noreply, socket}
+    else
+      {:noreply, assign(socket, :remaining_seconds, 0)}
+    end
+  end
+
+  defp calc_remaining(game_state) do
+    if game_state.turn_started_at do
+      elapsed = System.monotonic_time() - game_state.turn_started_at
+      elapsed_sec = div(elapsed, 1_000_000_000)
+      max(0, @turn_timeout - elapsed_sec)
+    else
+      nil
+    end
+  end
+
+  defp start_timer_tick(socket, game_state) do
+    if game_state.status == :playing and game_state.turn_started_at != nil do
+      Process.send_after(self(), :timer_tick, 1000)
+    end
+
+    socket
   end
 
   def handle_event("make_move", %{"row" => row, "col" => col}, socket) do
@@ -113,6 +168,17 @@ defmodule TrisWeb.GameLive do
                       Waiting for opponent...
                   <% end %>
                 </span>
+                <%= if @remaining_seconds != nil do %>
+                  <span class={[
+                    "ml-auto text-xs font-mono font-bold px-2 py-0.5 rounded-box transition-all duration-300",
+                    @remaining_seconds <= 5 && "bg-red-500 text-white animate-pulse",
+                    (@remaining_seconds > 5 and @remaining_seconds <= 10) &&
+                      "bg-amber-400 text-amber-900",
+                    @remaining_seconds > 10 && "bg-base-content/10"
+                  ]}>
+                    {@remaining_seconds}s
+                  </span>
+                <% end %>
               </div>
               <div class="font-bold">
                 <%= if @game_state.turn == @player_mark do %>

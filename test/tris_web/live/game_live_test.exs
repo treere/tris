@@ -146,4 +146,34 @@ defmodule TrisWeb.GameLiveTest do
       assert html =~ "Bot (Hard)"
     end
   end
+
+  describe "turn timer" do
+    test "shows countdown when it's the player's turn", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      assert has_element?(view, "span", "30s")
+    end
+
+    test "shows timeout message when game ends due to timeout", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      game_state = Tris.GameServer.get_state(game_id)
+
+      send(
+        view.pid,
+        {:game_update,
+         %{
+           game_state
+           | status: :won,
+             winner: :o,
+             timeout_player: :x,
+             turn_started_at: nil,
+             timer_ref: nil
+         }}
+      )
+
+      html = render(view)
+      assert html =~ "Alice ran out of time!"
+    end
+  end
 end
