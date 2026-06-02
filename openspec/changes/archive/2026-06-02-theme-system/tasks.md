@@ -23,7 +23,7 @@
 ## 5. Verify and Polish
 
 - [x] 5.1 Run `mix compile` to ensure no compilation errors
-- [ ] 5.2 Verify all themes render correctly in the browser by cycling through each option (manual)
-- [ ] 5.3 Verify theme persists across page reloads and syncs across browser tabs (manual)
-- [ ] 5.4 Verify first-time visitor gets the default theme and system dark mode applies the correct theme (manual)
+- [x] 5.2 Verify all themes render correctly in the browser by cycling through each option (manual)
+- [x] 5.3 Verify theme persists across page reloads and syncs across browser tabs (manual)
+- [x] 5.4 Verify first-time visitor gets the default theme and system dark mode applies the correct theme (manual)
 - [x] 5.5 Run `mix precommit` to fix any linting or formatting issues

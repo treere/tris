@@ -42,6 +42,13 @@ Result display and return-to-lobby navigation are now covered (`game_live_test.e
 
 ## Completed
 
+### theme-system (June 2026)
+- 6 curated daisyUI themes: Phoenix, Elixir, Forest, Ocean, Sunset, Midnight
+- Renamed `light` → `phoenix` (default), `dark` → `elixir` (system dark mode)
+- Theme selector dropdown with color swatches in top-right corner of layout
+- "System" option follows OS preference
+- Client-side persistence via localStorage (existing mechanism)
+
 ### post-game-flow (June 2026)
 - Auto-redirect to lobby 5s after game ends
 - "Return to lobby" button preserved for instant navigation
