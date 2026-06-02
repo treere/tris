@@ -72,6 +72,53 @@ defmodule TrisWeb.GameLiveTest do
     assert has_element?(view, "span", "Waiting...")
   end
 
+  describe "game over redirect" do
+    test "shows result and redirect text when game ends", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      game_state = Tris.GameServer.get_state(game_id)
+
+      send(
+        view.pid,
+        {:game_update,
+         %{game_state | status: :won, winner: :x, winning_cells: [{0, 0}, {0, 1}, {0, 2}]}}
+      )
+
+      html = render(view)
+      assert html =~ "Alice wins!"
+      assert html =~ "Redirecting to lobby..."
+      assert has_element?(view, "button", "Return to lobby")
+    end
+
+    test "shows tie text when game ends in tie", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      state = Tris.GameServer.get_state(game_id)
+      send(view.pid, {:game_update, %{state | status: :tie}})
+
+      html = render(view)
+      assert html =~ "tie!"
+    end
+
+    test "return_to_lobby navigates to lobby with username", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      game_state = Tris.GameServer.get_state(game_id)
+
+      send(
+        view.pid,
+        {:game_update,
+         %{game_state | status: :won, winner: :x, winning_cells: [{0, 0}, {0, 1}, {0, 2}]}}
+      )
+
+      render(view)
+
+      view |> element("button", "Return to lobby") |> render_click()
+
+      assert_redirect(view, ~p"/?username=Alice")
+    end
+  end
+
   describe "bot game display" do
     setup do
       bot_game_id = "bot-game-#{System.unique_integer([:positive])}"

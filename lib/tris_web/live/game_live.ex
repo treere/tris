@@ -39,6 +39,8 @@ defmodule TrisWeb.GameLive do
   end
 
   def handle_info({:game_update, game_state}, socket) do
+    previous_result = socket.assigns.result
+
     result =
       cond do
         game_state.status == :won -> "#{game_state.names[game_state.winner]} wins!"
@@ -52,7 +54,15 @@ defmodule TrisWeb.GameLive do
       |> assign(:is_my_turn, game_state.turn == socket.assigns.player_mark)
       |> assign(:result, result)
 
+    if result != nil and previous_result == nil do
+      Process.send_after(self(), :redirect_to_lobby, 5000)
+    end
+
     {:noreply, socket}
+  end
+
+  def handle_info(:redirect_to_lobby, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/?username=#{socket.assigns.my_name}")}
   end
 
   def handle_event("make_move", %{"row" => row, "col" => col}, socket) do
@@ -67,7 +77,7 @@ defmodule TrisWeb.GameLive do
   end
 
   def handle_event("return_to_lobby", _, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/")}
+    {:noreply, push_navigate(socket, to: ~p"/?username=#{socket.assigns.my_name}")}
   end
 
   def render(assigns) do
@@ -167,6 +177,7 @@ defmodule TrisWeb.GameLive do
               <button phx-click="return_to_lobby" class="btn btn-primary">
                 Return to lobby
               </button>
+              <p class="text-sm text-base-content/50 mt-3">Redirecting to lobby...</p>
             </div>
           <% end %>
         <% else %>

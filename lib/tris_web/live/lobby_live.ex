@@ -3,6 +3,17 @@ defmodule TrisWeb.LobbyLive do
 
   alias Tris.Matchmaker
 
+  def mount(%{"username" => username}, _session, socket) when byte_size(username) > 0 do
+    socket =
+      socket
+      |> assign(:username, username)
+      |> assign(:show_form, false)
+      |> assign(:queue_status, nil)
+      |> assign(:form, to_form(%{"username" => ""}, as: :user))
+
+    {:ok, socket}
+  end
+
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -79,6 +90,17 @@ defmodule TrisWeb.LobbyLive do
      |> push_navigate(to: "/game/#{game_id}?m=#{mark}&n=#{my_name}&o=#{opponent_name}")}
   end
 
+  def handle_event("change_name", _, socket) do
+    Matchmaker.cancel(self())
+
+    {:noreply,
+     socket
+     |> assign(:username, nil)
+     |> assign(:show_form, true)
+     |> assign(:queue_status, nil)
+     |> assign(:form, to_form(%{"username" => ""}, as: :user))}
+  end
+
   def handle_event("cancel_queue", _, socket) do
     Matchmaker.cancel(self())
     {:noreply, assign(socket, :queue_status, nil)}
@@ -125,6 +147,9 @@ defmodule TrisWeb.LobbyLive do
           <div class="card bg-base-200 p-6 rounded-box">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-semibold">Welcome, {@username}</h2>
+              <button phx-click="change_name" class="btn btn-ghost btn-sm">
+                Change name
+              </button>
             </div>
 
             <%= cond do %>

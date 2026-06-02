@@ -1,5 +1,5 @@
 defmodule TrisWeb.LobbyLiveTest do
-  use TrisWeb.ConnCase, async: true
+  use TrisWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
@@ -38,5 +38,33 @@ defmodule TrisWeb.LobbyLiveTest do
 
     view |> element("button", "Ask to play") |> render_click()
     assert has_element?(view, "button", "Cancel")
+  end
+
+  test "shows Change name button after setting username", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    view
+    |> element("#username-form")
+    |> render_submit(%{user: %{username: "testplayer"}})
+
+    assert has_element?(view, "button", "Change name")
+  end
+
+  test "Change name returns to username form", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    view
+    |> element("#username-form")
+    |> render_submit(%{user: %{username: "testplayer"}})
+
+    view |> element("button", "Change name") |> render_click()
+
+    assert has_element?(view, "#username-form")
+  end
+
+  test "restores username from query param on mount", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/?username=Alice")
+    assert has_element?(view, "button", "Ask to play")
+    assert has_element?(view, "button", "Change name")
   end
 end
