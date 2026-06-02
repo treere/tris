@@ -37,6 +37,9 @@ defmodule TrisWeb.Layouts do
     ~H"""
     <main class="px-4 py-8 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-2xl">
+        <div class="flex justify-end mb-4">
+          <.theme_selector />
+        </div>
         {render_slot(@inner_block)}
       </div>
     </main>
@@ -89,38 +92,46 @@ defmodule TrisWeb.Layouts do
   end
 
   @doc """
-  Provides dark vs light theme toggle based on themes defined in app.css.
-
-  See <head> in root.html.heex which applies the theme before page load.
+  Theme selector dropdown showing all available themes with color swatches.
   """
-  def theme_toggle(assigns) do
+  attr :themes, :list,
+    default: [
+      %{id: "phoenix", label: "Phoenix", color: "oklch(70% 0.213 47.604)"},
+      %{id: "elixir", label: "Elixir", color: "oklch(58% 0.233 277.117)"},
+      %{id: "forest", label: "Forest", color: "oklch(50% 0.2 145)"},
+      %{id: "ocean", label: "Ocean", color: "oklch(48% 0.22 260)"},
+      %{id: "sunset", label: "Sunset", color: "oklch(60% 0.22 30)"},
+      %{id: "midnight", label: "Midnight", color: "oklch(55% 0.22 280)"}
+    ]
+
+  def theme_selector(assigns) do
     ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="system"
-      >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
+    <div class="dropdown dropdown-end">
+      <button class="btn btn-ghost btn-sm rounded-full" aria-label="Choose theme">
+        <.icon name="hero-swatch-micro" class="size-4" />
       </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="light"
-      >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
-
-      <button
-        class="flex p-2 cursor-pointer w-1/3"
-        phx-click={JS.dispatch("phx:set-theme")}
-        data-phx-theme="dark"
-      >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
-      </button>
+      <div class="dropdown-content card card-sm bg-base-100 border border-base-300 shadow-lg mt-2 p-2 min-w-40">
+        <div class="flex flex-col gap-0.5">
+          <div :for={theme <- @themes}>
+            <button
+              phx-click={JS.dispatch("phx:set-theme")}
+              data-phx-theme={theme.id}
+              class="flex items-center gap-2 w-full px-3 py-1.5 rounded-box hover:bg-base-200 text-sm"
+            >
+              <span class="size-3 rounded-full shrink-0" style={"background: #{theme.color}"} />
+              {theme.label}
+            </button>
+          </div>
+        </div>
+        <div class="divider my-1"></div>
+        <button
+          phx-click={JS.dispatch("phx:set-theme")}
+          data-phx-theme="system"
+          class="flex items-center gap-2 w-full px-3 py-1.5 rounded-box hover:bg-base-200 text-sm"
+        >
+          <.icon name="hero-computer-desktop-micro" class="size-3 shrink-0" /> System
+        </button>
+      </div>
     </div>
     """
   end
