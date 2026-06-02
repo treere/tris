@@ -11,6 +11,10 @@ defmodule Tris.Matchmaker do
     GenServer.call(__MODULE__, {:ask_to_play, player_pid, player_name}, :infinity)
   end
 
+  def play_with_bot(player_pid, player_name, difficulty) do
+    GenServer.call(__MODULE__, {:play_with_bot, player_pid, player_name, difficulty}, :infinity)
+  end
+
   def cancel(player_pid) do
     GenServer.call(__MODULE__, {:cancel, player_pid})
   end
@@ -35,10 +39,22 @@ defmodule Tris.Matchmaker do
     end
   end
 
+  def handle_call({:play_with_bot, player_pid, player_name, difficulty}, _from, state) do
+    game_id = "#{System.unique_integer([:positive])}"
+
+    {:ok, _pid} = GameSupervisor.start_bot_game(game_id, player_pid, player_name, difficulty)
+
+    bot_name = bot_label(difficulty)
+    {:reply, {:matched, game_id, :x, player_name, bot_name}, state}
+  end
+
   def handle_call({:cancel, player_pid}, _from, state) do
     new_queue = Enum.reject(state.queue, fn {pid, _name} -> pid == player_pid end)
     {:reply, :ok, %{state | queue: new_queue}}
   end
+
+  defp bot_label(:easy), do: "Bot (Easy)"
+  defp bot_label(:hard), do: "Bot (Hard)"
 
   defp start_game(player1_pid, player1_name, player2_pid, player2_name) do
     game_id = "#{System.unique_integer([:positive])}"

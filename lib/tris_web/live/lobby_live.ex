@@ -66,6 +66,19 @@ defmodule TrisWeb.LobbyLive do
     end
   end
 
+  def handle_event("play_with_bot", %{"difficulty" => difficulty}, socket) do
+    {:matched, game_id, mark, my_name, opponent_name} =
+      Matchmaker.play_with_bot(
+        self(),
+        socket.assigns.username,
+        String.to_existing_atom(difficulty)
+      )
+
+    {:noreply,
+     socket
+     |> push_navigate(to: "/game/#{game_id}?m=#{mark}&n=#{my_name}&o=#{opponent_name}")}
+  end
+
   def handle_event("cancel_queue", _, socket) do
     Matchmaker.cancel(self())
     {:noreply, assign(socket, :queue_status, nil)}
@@ -129,10 +142,29 @@ defmodule TrisWeb.LobbyLive do
                   <p class="text-base-content/70">Match found! Joining game...</p>
                 </div>
               <% true -> %>
-                <div class="text-center py-8">
-                  <button phx-click="ask_to_play" class="btn btn-primary btn-lg">
+                <div class="text-center py-8 space-y-4">
+                  <button phx-click="ask_to_play" class="btn btn-primary btn-lg w-full">
                     Ask to play
                   </button>
+                  <div class="divider text-base-content/40 text-xs uppercase tracking-wider font-semibold">
+                    or play against
+                  </div>
+                  <div class="flex gap-3">
+                    <button
+                      phx-click="play_with_bot"
+                      phx-value-difficulty="easy"
+                      class="btn btn-outline btn-lg flex-1"
+                    >
+                      Bot (Easy)
+                    </button>
+                    <button
+                      phx-click="play_with_bot"
+                      phx-value-difficulty="hard"
+                      class="btn btn-outline btn-lg flex-1"
+                    >
+                      Bot (Hard)
+                    </button>
+                  </div>
                 </div>
             <% end %>
           </div>

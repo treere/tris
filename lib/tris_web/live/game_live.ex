@@ -22,12 +22,15 @@ defmodule TrisWeb.GameLive do
 
     opponent_mark = player_mark && if(player_mark == :x, do: :o, else: :x)
 
+    is_bot_game = game_state.bot_difficulty != nil
+
     socket =
       socket
       |> assign(:game_id, game_id)
       |> assign(:game_state, game_state)
       |> assign(:player_mark, player_mark)
       |> assign(:is_my_turn, game_state.turn == player_mark)
+      |> assign(:is_bot_game, is_bot_game)
       |> assign(:my_name, game_state.names[player_mark] || params["n"])
       |> assign(:opponent_name, game_state.names[opponent_mark] || params["o"])
       |> assign(:result, nil)
@@ -91,10 +94,13 @@ defmodule TrisWeb.GameLive do
                   !@is_my_turn && "bg-base-content/30"
                 ]} />
                 <span class="text-xs font-semibold uppercase tracking-wider">
-                  <%= if @is_my_turn do %>
-                    Your turn
-                  <% else %>
-                    Waiting for opponent...
+                  <%= cond do %>
+                    <% @is_my_turn -> %>
+                      Your turn
+                    <% @is_bot_game -> %>
+                      Waiting for Bot...
+                    <% true -> %>
+                      Waiting for opponent...
                   <% end %>
                 </span>
               </div>

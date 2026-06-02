@@ -71,4 +71,32 @@ defmodule TrisWeb.GameLiveTest do
 
     assert has_element?(view, "span", "Waiting...")
   end
+
+  describe "bot game display" do
+    setup do
+      bot_game_id = "bot-game-#{System.unique_integer([:positive])}"
+
+      start_supervised!(
+        {Tris.GameServer,
+         %{
+           game_id: bot_game_id,
+           player1_pid: self(),
+           player1_name: "Human",
+           player2_pid: :bot,
+           player2_name: "Bot (Hard)",
+           bot_difficulty: :hard
+         }},
+        id: :bot_game_live
+      )
+
+      %{game_id: bot_game_id}
+    end
+
+    test "shows bot opponent name", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      html = render(view)
+      assert html =~ "Bot (Hard)"
+    end
+  end
 end

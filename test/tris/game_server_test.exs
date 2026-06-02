@@ -1,6 +1,8 @@
 defmodule Tris.GameServerTest do
   use ExUnit.Case, async: true
 
+  alias Tris.GameServer
+
   setup do
     game_id = "test-#{System.unique_integer([:positive])}"
 
@@ -17,6 +19,44 @@ defmodule Tris.GameServerTest do
       )
 
     %{game_id: game_id}
+  end
+
+  describe "bot game integration" do
+    setup do
+      bot_game_id = "bot-test-#{System.unique_integer([:positive])}"
+
+      start_supervised(
+        {Tris.GameServer,
+         %{
+           game_id: bot_game_id,
+           player1_pid: self(),
+           player1_name: "Human",
+           player2_pid: :bot,
+           player2_name: "Bot (Hard)",
+           bot_difficulty: :hard
+         }},
+        id: :bot_game
+      )
+
+      %{game_id: bot_game_id}
+    end
+
+    test "human can make first move in bot game", %{game_id: game_id} do
+      assert {:ok, state} = GameServer.make_move(game_id, self(), 0, 0)
+      assert state.board[{0, 0}] == :x
+      assert state.turn == :o
+    end
+
+    test "rejects human move on occupied cell in bot game", %{game_id: game_id} do
+      GameServer.make_move(game_id, self(), 0, 0)
+      assert {:error, :cell_occupied} = GameServer.make_move(game_id, self(), 0, 0)
+    end
+
+    test "bot game state has bot_difficulty set", %{game_id: game_id} do
+      state = GameServer.get_state(game_id)
+      assert state.bot_difficulty == :hard
+      assert state.players[:o] == :bot
+    end
   end
 
   describe "make_move/4" do

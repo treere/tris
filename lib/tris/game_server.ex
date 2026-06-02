@@ -2,6 +2,9 @@ defmodule Tris.GameServer do
   use GenServer
 
   alias Phoenix.PubSub
+  alias Tris.BotPlayer
+
+  @bot_move_delay 800
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: via_tuple(args.game_id))
@@ -41,7 +44,8 @@ defmodule Tris.GameServer do
       turn: :x,
       status: :playing,
       winner: nil,
-      winning_cells: []
+      winning_cells: [],
+      bot_difficulty: Map.get(args, :bot_difficulty)
     }
 
     {:ok, state}
@@ -53,31 +57,15 @@ defmodule Tris.GameServer do
       state.status != :playing ->
         {:reply, {:error, :game_over}, state}
 
-      state.players[state.turn] != player_pid ->
+      state.players[state.turn] != player_pid and not is_bot_turn?(state) ->
         {:reply, {:error, :not_your_turn}, state}
 
       Map.has_key?(state.board, {row, col}) ->
         {:reply, {:error, :cell_occupied}, state}
 
       true ->
-        new_board = Map.put(state.board, {row, col}, state.turn)
-        next_turn = if state.turn == :x, do: :o, else: :x
-
-        {won, winning_cells} = check_win(new_board, state.turn)
-        tie = not won and map_size(new_board) == 9
-
-        status = if(won, do: :won, else: if(tie, do: :tie, else: :playing))
-
-        new_state = %{
-          state
-          | board: new_board,
-            turn: next_turn,
-            status: status,
-            winner: if(won, do: state.turn, else: nil),
-            winning_cells: winning_cells
-        }
-
-        broadcast_update(new_state)
+        new_state = apply_move(state, row, col)
+        new_state = schedule_bot_move(new_state)
         {:reply, {:ok, new_state}, new_state}
     end
   end
@@ -88,6 +76,48 @@ defmodule Tris.GameServer do
 
   def handle_call({:register_player, mark, pid}, _from, state) do
     {:reply, :ok, put_in(state, [:players, mark], pid)}
+  end
+
+  @impl true
+  def handle_info({:bot_move, bot_mark}, state) do
+    {row, col} = BotPlayer.move(state.board, state.bot_difficulty)
+    new_state = apply_move(state, row, col, bot_mark)
+    {:noreply, new_state}
+  end
+
+  defp is_bot_turn?(state) do
+    state.bot_difficulty != nil and state.players[state.turn] == :bot
+  end
+
+  defp schedule_bot_move(state) do
+    if state.status == :playing and state.players[state.turn] == :bot do
+      Process.send_after(self(), {:bot_move, state.turn}, @bot_move_delay)
+    end
+
+    state
+  end
+
+  defp apply_move(state, row, col, player \\ nil) do
+    player = player || state.turn
+    new_board = Map.put(state.board, {row, col}, player)
+    next_turn = if player == :x, do: :o, else: :x
+
+    {won, winning_cells} = check_win(new_board, player)
+    tie = not won and map_size(new_board) == 9
+
+    status = if(won, do: :won, else: if(tie, do: :tie, else: :playing))
+
+    new_state = %{
+      state
+      | board: new_board,
+        turn: next_turn,
+        status: status,
+        winner: if(won, do: player, else: nil),
+        winning_cells: winning_cells
+    }
+
+    broadcast_update(new_state)
+    new_state
   end
 
   defp broadcast_update(state) do
