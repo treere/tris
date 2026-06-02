@@ -27,6 +27,7 @@ defmodule TrisWeb.GameLive do
       |> assign(:game_id, game_id)
       |> assign(:game_state, game_state)
       |> assign(:player_mark, player_mark)
+      |> assign(:is_my_turn, game_state.turn == player_mark)
       |> assign(:my_name, game_state.names[player_mark] || params["n"])
       |> assign(:opponent_name, game_state.names[opponent_mark] || params["o"])
       |> assign(:result, nil)
@@ -45,6 +46,7 @@ defmodule TrisWeb.GameLive do
     socket =
       socket
       |> assign(:game_state, game_state)
+      |> assign(:is_my_turn, game_state.turn == socket.assigns.player_mark)
       |> assign(:result, result)
 
     {:noreply, socket}
@@ -74,22 +76,58 @@ defmodule TrisWeb.GameLive do
         </div>
 
         <%= if @game_state do %>
-          <div class="flex justify-between items-center mb-6 text-sm">
+          <% other_mark = if(@game_state.turn == :x, do: :o, else: :x) %>
+
+          <div class="space-y-3 mb-6">
             <div class={[
-              "px-4 py-2 rounded-box",
-              @game_state.turn == :x && "bg-primary text-primary-content"
+              "px-4 py-3 rounded-box transition-all duration-300",
+              @is_my_turn && "bg-primary text-primary-content",
+              !@is_my_turn && "bg-base-200"
             ]}>
-              {@game_state.names.x} (X)
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class={[
+                  "size-2 rounded-full",
+                  @is_my_turn && "bg-current animate-pulse",
+                  !@is_my_turn && "bg-base-content/30"
+                ]} />
+                <span class="text-xs font-semibold uppercase tracking-wider">
+                  <%= if @is_my_turn do %>
+                    Your turn
+                  <% else %>
+                    Waiting for opponent...
+                  <% end %>
+                </span>
+              </div>
+              <div class="font-bold">
+                <%= if @game_state.turn == @player_mark do %>
+                  You
+                <% else %>
+                  {@game_state.names[@game_state.turn]}
+                <% end %>
+                ({@game_state.turn})
+              </div>
             </div>
-            <div class={[
-              "px-4 py-2 rounded-box",
-              @game_state.turn == :o && "bg-primary text-primary-content"
-            ]}>
-              {@game_state.names.o} (O)
+
+            <div class="px-4 py-3 rounded-box bg-base-200/50 text-base-content/50">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="size-2 rounded-full bg-base-content/20" />
+                <span class="text-xs font-semibold uppercase tracking-wider">Waiting...</span>
+              </div>
+              <div class="font-bold">
+                <%= if other_mark == @player_mark do %>
+                  You
+                <% else %>
+                  {@game_state.names[other_mark]}
+                <% end %>
+                ({other_mark})
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-2 mx-auto max-w-sm">
+          <div class={[
+            "grid grid-cols-3 gap-2 mx-auto max-w-sm transition-all duration-300",
+            !@is_my_turn && "opacity-50 pointer-events-none"
+          ]}>
             <%= for row <- 0..2 do %>
               <%= for col <- 0..2 do %>
                 <% cell = Map.get(@game_state.board, {row, col}) %>
