@@ -31,6 +31,10 @@ defmodule Tris.GameServer do
     GenServer.call(via_tuple(game_id), {:register_player, mark, pid})
   end
 
+  def resign(game_id, player_pid) do
+    GenServer.call(via_tuple(game_id), {:resign, player_pid})
+  end
+
   def send_message(game_id, sender_name, text) do
     GenServer.cast(via_tuple(game_id), {:send_message, sender_name, text})
   end
@@ -54,7 +58,8 @@ defmodule Tris.GameServer do
       bot_difficulty: Map.get(args, :bot_difficulty),
       timer_ref: nil,
       turn_started_at: nil,
-      timeout_player: nil
+      timeout_player: nil,
+      resigned_by: nil
     }
 
     state = start_timer(state)
@@ -86,6 +91,31 @@ defmodule Tris.GameServer do
 
   def handle_call({:register_player, mark, pid}, _from, state) do
     {:reply, :ok, put_in(state, [:players, mark], pid)}
+  end
+
+  def handle_call({:resign, player_pid}, _from, state) do
+    if state.status != :playing do
+      {:reply, {:error, :game_over}, state}
+    else
+      {resigning_mark, _other} =
+        Enum.find(state.players, fn {_mark, pid} -> pid == player_pid end)
+
+      opponent = if resigning_mark == :x, do: :o, else: :x
+
+      state = cancel_timer(state)
+
+      new_state = %{
+        state
+        | status: :won,
+          winner: opponent,
+          resigned_by: resigning_mark,
+          timer_ref: nil,
+          turn_started_at: nil
+      }
+
+      broadcast_update(new_state)
+      {:reply, {:ok, new_state}, new_state}
+    end
   end
 
   @impl true
@@ -121,7 +151,8 @@ defmodule Tris.GameServer do
           winner: opponent,
           timeout_player: player,
           timer_ref: nil,
-          turn_started_at: nil
+          turn_started_at: nil,
+          resigned_by: nil
       }
 
       broadcast_update(new_state)

@@ -185,4 +185,31 @@ defmodule Tris.GameServerTest do
       assert state.winner == nil
     end
   end
+
+  describe "resign/2" do
+    test "allows player to resign on their own turn", %{game_id: game_id} do
+      assert {:ok, state} = Tris.GameServer.resign(game_id, self())
+      assert state.status == :won
+      assert state.winner == :o
+      assert state.resigned_by == :x
+    end
+
+    test "allows player to resign on opponent's turn", %{game_id: game_id} do
+      Tris.GameServer.make_move(game_id, self(), 0, 0)
+      assert {:ok, state} = Tris.GameServer.resign(game_id, :player2_pid)
+      assert state.status == :won
+      assert state.winner == :x
+      assert state.resigned_by == :o
+    end
+
+    test "rejects resign when game is already over", %{game_id: game_id} do
+      Tris.GameServer.resign(game_id, self())
+      assert {:error, :game_over} = Tris.GameServer.resign(game_id, :player2_pid)
+    end
+
+    test "state has resigned_by field set to nil initially", %{game_id: game_id} do
+      state = Tris.GameServer.get_state(game_id)
+      assert state.resigned_by == nil
+    end
+  end
 end

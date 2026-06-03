@@ -39,6 +39,7 @@ defmodule TrisWeb.GameLive do
       |> assign(:opponent_name, game_state.names[opponent_mark] || params["o"])
       |> assign(:result, nil)
       |> assign(:remaining_seconds, calc_remaining(game_state))
+      |> assign(:show_resign_modal, false)
       |> assign(:chat_form, to_form(%{"text" => ""}))
 
     start_timer_tick(socket, game_state)
@@ -57,6 +58,9 @@ defmodule TrisWeb.GameLive do
       cond do
         game_state.status == :won and game_state.timeout_player ->
           "#{game_state.names[game_state.timeout_player]} ran out of time!"
+
+        game_state.status == :won and game_state.resigned_by ->
+          "#{game_state.names[game_state.resigned_by]} resigned!"
 
         game_state.status == :won ->
           "#{game_state.names[game_state.winner]} wins!"
@@ -135,6 +139,19 @@ defmodule TrisWeb.GameLive do
     end
 
     {:noreply, socket}
+  end
+
+  def handle_event("resign", _, socket) do
+    GameServer.resign(socket.assigns.game_id, self())
+    {:noreply, assign(socket, :show_resign_modal, false)}
+  end
+
+  def handle_event("show_resign_modal", _, socket) do
+    {:noreply, assign(socket, :show_resign_modal, true)}
+  end
+
+  def handle_event("cancel_resign", _, socket) do
+    {:noreply, assign(socket, :show_resign_modal, false)}
   end
 
   def handle_event("make_move", %{"row" => row, "col" => col}, socket) do
@@ -283,6 +300,34 @@ defmodule TrisWeb.GameLive do
               </.form>
             </div>
           <% end %>
+
+          <%= if @game_state.status == :playing do %>
+            <div class="mt-6 text-center">
+              <button
+                phx-click="show_resign_modal"
+                class="btn btn-outline btn-error btn-sm"
+              >
+                Resign
+              </button>
+            </div>
+          <% end %>
+
+          <div
+            id="resign-modal"
+            class={[
+              "fixed inset-0 z-50 flex items-center justify-center",
+              unless(@show_resign_modal, do: "hidden")
+            ]}
+          >
+            <div class="fixed inset-0 bg-black/50" phx-click="cancel_resign" />
+            <div class="relative bg-base-100 rounded-box p-6 shadow-xl max-w-sm mx-4 text-center">
+              <p class="text-lg font-semibold mb-6">Are you sure you want to resign?</p>
+              <div class="flex gap-3 justify-center">
+                <button phx-click="cancel_resign" class="btn btn-ghost">Cancel</button>
+                <button phx-click="resign" class="btn btn-error">Confirm, resign</button>
+              </div>
+            </div>
+          </div>
 
           <%= if @result do %>
             <div class="text-center mt-8">

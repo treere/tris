@@ -173,6 +173,57 @@ defmodule TrisWeb.GameLiveTest do
     end
   end
 
+  describe "resign" do
+    test "shows resign button when game is playing", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      assert has_element?(view, "button", "Resign")
+    end
+
+    test "shows confirmation modal when resign button is clicked", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      view |> element("button", "Resign") |> render_click()
+
+      assert has_element?(view, "p", "Are you sure you want to resign?")
+      assert has_element?(view, "button", "Cancel")
+      assert has_element?(view, "button", "Confirm, resign")
+    end
+
+    test "hides modal when cancel is clicked", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      view |> element("button", "Resign") |> render_click()
+      assert has_element?(view, "#resign-modal")
+      refute has_element?(view, "#resign-modal.hidden")
+
+      view |> element("button", "Cancel") |> render_click()
+
+      assert has_element?(view, "#resign-modal.hidden")
+    end
+
+    test "shows resign result message after confirming", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      view |> element("button", "Resign") |> render_click()
+      view |> element("button", "Confirm, resign") |> render_click()
+
+      html = render(view)
+      assert html =~ "Alice resigned!"
+      assert has_element?(view, "button", "Return to lobby")
+    end
+
+    test "shows resign message for opponent player", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=o")
+
+      game_state = Tris.GameServer.get_state(game_id)
+      send(view.pid, {:game_update, %{game_state | status: :won, winner: :o, resigned_by: :x}})
+
+      html = render(view)
+      assert html =~ "Alice resigned!"
+    end
+  end
+
   describe "turn timer" do
     test "shows countdown when it's the player's turn", %{conn: conn, game_id: game_id} do
       {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
