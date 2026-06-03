@@ -8,8 +8,10 @@ A real-time multiplayer Tic-Tac-Toe game built with **Phoenix LiveView** and **E
 - **Bot opponent** — play against Easy (random) or Hard (minimax, unbeatable)
 - **30-second turn timer** — auto-forfeit if you run out of time
 - **Live board updates** — moves appear instantly via Phoenix PubSub
+- **In-game chat** — chat with your human opponent during a match
+- **Resign anytime** — concede and return to lobby with one click
 - **6 curated themes** — pick your look with a persistent dropdown (Phoenix, Elixir, Forest, Ocean, Sunset, Midnight)
-- **Fully anonymous** — pick a username, no sign-up required
+- **Fully anonymous** — pick a username (persisted in localStorage), no sign-up required
 
 ## Setup
 
