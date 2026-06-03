@@ -97,24 +97,27 @@ defmodule Tris.GameServer do
     if state.status != :playing do
       {:reply, {:error, :game_over}, state}
     else
-      {resigning_mark, _other} =
-        Enum.find(state.players, fn {_mark, pid} -> pid == player_pid end)
+      case Enum.find(state.players, fn {_mark, pid} -> pid == player_pid end) do
+        {resigning_mark, _other} ->
+          opponent = if resigning_mark == :x, do: :o, else: :x
 
-      opponent = if resigning_mark == :x, do: :o, else: :x
+          state = cancel_timer(state)
 
-      state = cancel_timer(state)
+          new_state = %{
+            state
+            | status: :won,
+              winner: opponent,
+              resigned_by: resigning_mark,
+              timer_ref: nil,
+              turn_started_at: nil
+          }
 
-      new_state = %{
-        state
-        | status: :won,
-          winner: opponent,
-          resigned_by: resigning_mark,
-          timer_ref: nil,
-          turn_started_at: nil
-      }
+          broadcast_update(new_state)
+          {:reply, {:ok, new_state}, new_state}
 
-      broadcast_update(new_state)
-      {:reply, {:ok, new_state}, new_state}
+        nil ->
+          {:reply, {:error, :player_not_found}, state}
+      end
     end
   end
 

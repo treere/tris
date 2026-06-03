@@ -32,6 +32,8 @@ defmodule TrisWeb.AdminLive do
         _result, acc -> acc
       end)
 
+    playing_games = Enum.filter(games, &(&1.status == :playing))
+
     all_presences = Tris.Presence.list("user")
 
     lobby_users =
@@ -41,28 +43,27 @@ defmodule TrisWeb.AdminLive do
 
     in_game_names =
       games
-      |> Enum.flat_map(&Map.values(&1.names))
-      |> Enum.reject(&String.contains?(&1, "Bot"))
+      |> Enum.flat_map(fn game ->
+        game.players
+        |> Enum.filter(fn {_mark, pid} -> pid != :bot end)
+        |> Enum.map(fn {mark, _pid} -> game.names[mark] end)
+      end)
       |> Enum.uniq()
 
-    queue_state = :sys.get_state(Tris.Matchmaker)
-    queue_depth = length(queue_state.queue)
-
-    waiting_names = Enum.map(queue_state.queue, fn {_pid, name} -> name end)
+    queue_depth = Tris.Matchmaker.queue_length()
 
     %{
       lobby_users: lobby_users,
       in_game_users: length(in_game_names),
       waiting_users: queue_depth,
-      total_users: lobby_users + length(in_game_names) + queue_depth,
-      active_games_count: length(games),
+      total_users: lobby_users + length(in_game_names),
+      active_games_count: length(playing_games),
       bot_games_count: Enum.count(games, &(&1.bot_difficulty != nil)),
       human_games_count: Enum.count(games, &(&1.bot_difficulty == nil)),
       easy_bot: Enum.count(games, &(&1.bot_difficulty == :easy)),
       hard_bot: Enum.count(games, &(&1.bot_difficulty == :hard)),
       queue_depth: queue_depth,
-      waiting_names: waiting_names,
-      games: Enum.sort_by(games, & &1.game_id)
+      games: Enum.sort_by(playing_games, & &1.game_id)
     }
   end
 

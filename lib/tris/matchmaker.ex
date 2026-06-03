@@ -19,6 +19,10 @@ defmodule Tris.Matchmaker do
     GenServer.call(__MODULE__, {:cancel, player_pid})
   end
 
+  def queue_length do
+    GenServer.call(__MODULE__, :queue_length)
+  end
+
   @impl true
   def init(_opts) do
     {:ok, %{queue: []}}
@@ -51,6 +55,10 @@ defmodule Tris.Matchmaker do
   def handle_call({:cancel, player_pid}, _from, state) do
     new_queue = Enum.reject(state.queue, fn {pid, _name} -> pid == player_pid end)
     {:reply, :ok, %{state | queue: new_queue}}
+  end
+
+  def handle_call(:queue_length, _from, state) do
+    {:reply, length(state.queue), state}
   end
 
   defp bot_label(:easy), do: "Bot (Easy)"
