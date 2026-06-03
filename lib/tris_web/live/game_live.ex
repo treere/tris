@@ -33,14 +33,21 @@ defmodule TrisWeb.GameLive do
       |> assign(:player_mark, player_mark)
       |> assign(:is_my_turn, game_state.turn == player_mark)
       |> assign(:is_bot_game, is_bot_game)
+      |> assign(:is_human_game, not is_bot_game)
+      |> assign(:chat_messages, game_state.chat_messages || [])
       |> assign(:my_name, game_state.names[player_mark] || params["n"])
       |> assign(:opponent_name, game_state.names[opponent_mark] || params["o"])
       |> assign(:result, nil)
       |> assign(:remaining_seconds, calc_remaining(game_state))
+      |> assign(:chat_form, to_form(%{"text" => ""}))
 
     start_timer_tick(socket, game_state)
 
     {:noreply, socket}
+  end
+
+  def handle_info({:chat_message, message}, socket) do
+    {:noreply, assign(socket, :chat_messages, socket.assigns.chat_messages ++ [message])}
   end
 
   def handle_info({:game_update, game_state}, socket) do
@@ -118,6 +125,16 @@ defmodule TrisWeb.GameLive do
     end
 
     socket
+  end
+
+  def handle_event("send_chat", %{"text" => text}, socket) do
+    text = String.trim(text)
+
+    if text != "" and not socket.assigns.is_bot_game do
+      GameServer.send_message(socket.assigns.game_id, socket.assigns.my_name, text)
+    end
+
+    {:noreply, socket}
   end
 
   def handle_event("make_move", %{"row" => row, "col" => col}, socket) do
@@ -236,6 +253,36 @@ defmodule TrisWeb.GameLive do
               <% end %>
             <% end %>
           </div>
+
+          <%= if @is_human_game do %>
+            <div class="mt-6 border-t border-base-300 pt-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2">
+                Chat
+              </div>
+              <div
+                class="bg-base-200 rounded-box p-3 space-y-1 max-h-36 overflow-y-auto mb-2"
+                id="chat-messages"
+              >
+                <%= if @chat_messages == [] do %>
+                  <p class="text-xs text-base-content/40 italic">No messages yet</p>
+                <% end %>
+                <div :for={msg <- @chat_messages} class="text-sm">
+                  <span class="font-semibold">{msg.sender}</span>
+                  <span class="text-base-content/70">{msg.text}</span>
+                </div>
+              </div>
+              <.form for={@chat_form} id="chat-form" phx-submit="send_chat" class="flex gap-2">
+                <.input
+                  field={@chat_form[:text]}
+                  type="text"
+                  placeholder="Type a message..."
+                  class="input input-bordered input-sm flex-1"
+                  autocomplete="off"
+                />
+                <button type="submit" class="btn btn-primary btn-sm">Send</button>
+              </.form>
+            </div>
+          <% end %>
 
           <%= if @result do %>
             <div class="text-center mt-8">

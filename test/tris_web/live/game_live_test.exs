@@ -119,6 +119,26 @@ defmodule TrisWeb.GameLiveTest do
     end
   end
 
+  describe "chat in human vs human game" do
+    test "shows chat panel for human games", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      assert has_element?(view, "#chat-form")
+      assert has_element?(view, "div", "Chat")
+    end
+
+    test "submitting chat message displays it", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      view
+      |> element("#chat-form")
+      |> render_submit(%{"text" => "Hello there!"})
+
+      html = render(view)
+      assert html =~ "Hello there!"
+    end
+  end
+
   describe "bot game display" do
     setup do
       bot_game_id = "bot-game-#{System.unique_integer([:positive])}"
@@ -144,6 +164,12 @@ defmodule TrisWeb.GameLiveTest do
 
       html = render(view)
       assert html =~ "Bot (Hard)"
+    end
+
+    test "does not show chat panel for bot games", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      refute has_element?(view, "#chat-form")
     end
   end
 

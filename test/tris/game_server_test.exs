@@ -78,6 +78,36 @@ defmodule Tris.GameServerTest do
     end
   end
 
+  describe "send_message/3" do
+    test "stores message in state and broadcasts via PubSub", %{game_id: game_id} do
+      Phoenix.PubSub.subscribe(Tris.PubSub, "game:#{game_id}")
+
+      GameServer.send_message(game_id, "Player1", "Hello!")
+
+      _ = :sys.get_state(game_pid(game_id))
+
+      state = GameServer.get_state(game_id)
+      assert length(state.chat_messages) == 1
+      assert hd(state.chat_messages).sender == "Player1"
+      assert hd(state.chat_messages).text == "Hello!"
+      assert hd(state.chat_messages).timestamp
+
+      assert_received {:chat_message, msg}
+      assert msg.sender == "Player1"
+      assert msg.text == "Hello!"
+    end
+
+    test "accumulates multiple messages in order", %{game_id: game_id} do
+      GameServer.send_message(game_id, "Player1", "First")
+      GameServer.send_message(game_id, "Player2", "Second")
+
+      _ = :sys.get_state(game_pid(game_id))
+
+      state = GameServer.get_state(game_id)
+      assert Enum.map(state.chat_messages, & &1.text) == ["First", "Second"]
+    end
+  end
+
   describe "make_move/4" do
     test "allows X to make the first move", %{game_id: game_id} do
       assert {:ok, state} = Tris.GameServer.make_move(game_id, self(), 0, 0)

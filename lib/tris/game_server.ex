@@ -31,6 +31,10 @@ defmodule Tris.GameServer do
     GenServer.call(via_tuple(game_id), {:register_player, mark, pid})
   end
 
+  def send_message(game_id, sender_name, text) do
+    GenServer.cast(via_tuple(game_id), {:send_message, sender_name, text})
+  end
+
   defp via_tuple(game_id) do
     {:via, Registry, {Tris.GameRegistry, game_id}}
   end
@@ -46,6 +50,7 @@ defmodule Tris.GameServer do
       status: :playing,
       winner: nil,
       winning_cells: [],
+      chat_messages: [],
       bot_difficulty: Map.get(args, :bot_difficulty),
       timer_ref: nil,
       turn_started_at: nil,
@@ -81,6 +86,21 @@ defmodule Tris.GameServer do
 
   def handle_call({:register_player, mark, pid}, _from, state) do
     {:reply, :ok, put_in(state, [:players, mark], pid)}
+  end
+
+  @impl true
+  def handle_cast({:send_message, sender_name, text}, state) do
+    message = %{
+      sender: sender_name,
+      text: text,
+      timestamp: DateTime.utc_now()
+    }
+
+    new_state = %{state | chat_messages: state.chat_messages ++ [message]}
+
+    PubSub.broadcast(Tris.PubSub, "game:#{state.game_id}", {:chat_message, message})
+
+    {:noreply, new_state}
   end
 
   @impl true
