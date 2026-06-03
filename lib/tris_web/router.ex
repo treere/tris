@@ -14,6 +14,18 @@ defmodule TrisWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :admin_auth do
+    plug TrisWeb.Plugs.AdminAuth,
+      username: "admin",
+      password: Application.compile_env(:tris, :admin_password, "admin")
+  end
+
+  scope "/admin", TrisWeb do
+    pipe_through [:browser, :admin_auth]
+
+    live "/", AdminLive, :index
+  end
+
   scope "/", TrisWeb do
     pipe_through :browser
 

@@ -46,6 +46,14 @@ defmodule TrisWeb.GameLive do
           |> assign(:show_resign_modal, false)
           |> assign(:chat_form, to_form(%{"text" => ""}))
 
+        if player_mark do
+          Tris.Presence.track(self(), "user", inspect(self()), %{
+            location: "game",
+            game_id: game_id,
+            mark: player_mark
+          })
+        end
+
         start_timer_tick(socket, game_state)
         assign(socket, :game_not_found, false)
       else

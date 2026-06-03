@@ -28,7 +28,9 @@ defmodule TrisWeb.CreditLive do
             <h2 class="text-lg font-semibold mb-3">Built with</h2>
             <ul class="space-y-2 text-base-content/80">
               <li>
-                <a href="https://phoenixframework.org" class="link link-hover font-medium">Phoenix Framework</a>
+                <a href="https://phoenixframework.org" class="link link-hover font-medium">
+                  Phoenix Framework
+                </a>
                 — real-time web framework for Elixir
               </li>
               <li>

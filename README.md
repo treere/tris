@@ -12,6 +12,7 @@ A real-time multiplayer Tic-Tac-Toe game built with **Phoenix LiveView** and **E
 - **Resign anytime** — concede and return to lobby with one click
 - **6 curated themes** — pick your look with a persistent dropdown (Phoenix, Elixir, Forest, Ocean, Sunset, Midnight)
 - **Fully anonymous** — pick a username (persisted in localStorage), no sign-up required
+- **Admin dashboard** — real-time usage analytics at `/admin` (password-protected, default `admin`/`admin`, configurable via `ADMIN_PASSWORD` env var)
 
 ## Setup
 
@@ -41,4 +42,5 @@ mix precommit  # compile + format + test, all in one
 | Matchmaking | `Tris.Matchmaker` GenServer |
 | Bot AI | Minimax (hard) / random (easy) |
 | Real-time | Phoenix PubSub |
+| User presence | Phoenix Presence |
 | Styling | Tailwind CSS v4 + daisyUI |

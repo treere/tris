@@ -11,14 +11,13 @@ defmodule Tris.Application do
       TrisWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:tris, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Tris.PubSub},
+      {Tris.Presence, []},
       {Registry, keys: :unique, name: Tris.GameRegistry},
       Tris.Matchmaker,
       Tris.GameSupervisor,
       TrisWeb.Endpoint
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Tris.Supervisor]
     Supervisor.start_link(children, opts)
   end

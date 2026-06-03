@@ -4,6 +4,8 @@ defmodule TrisWeb.LobbyLive do
   alias Tris.Matchmaker
 
   def mount(_params, _session, socket) do
+    Tris.Presence.track(self(), "user", inspect(self()), %{location: "lobby"})
+
     socket =
       socket
       |> assign(:username, nil)
@@ -202,7 +204,10 @@ defmodule TrisWeb.LobbyLive do
         <div id="username-hook" phx-hook="UsernamePersistence" />
 
         <div class="mt-8 text-center">
-          <.link navigate="/credits" class="text-xs text-base-content/40 hover:text-base-content/60 transition-colors">
+          <.link
+            navigate="/credits"
+            class="text-xs text-base-content/40 hover:text-base-content/60 transition-colors"
+          >
             Credits
           </.link>
         </div>
