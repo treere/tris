@@ -3,17 +3,6 @@ defmodule TrisWeb.LobbyLive do
 
   alias Tris.Matchmaker
 
-  def mount(%{"username" => username}, _session, socket) when byte_size(username) > 0 do
-    socket =
-      socket
-      |> assign(:username, username)
-      |> assign(:show_form, false)
-      |> assign(:queue_status, nil)
-      |> assign(:form, to_form(%{"username" => ""}, as: :user))
-
-    {:ok, socket}
-  end
-
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -57,9 +46,23 @@ defmodule TrisWeb.LobbyLive do
           |> assign(:username, username)
           |> assign(:show_form, false)
           |> assign(:queue_status, nil)
+          |> push_event("save_username", %{username: username})
 
         {:noreply, socket}
     end
+  end
+
+  def handle_event("restore_username", %{"username" => username}, socket)
+      when byte_size(username) > 0 do
+    {:noreply,
+     socket
+     |> assign(:username, username)
+     |> assign(:show_form, false)
+     |> assign(:queue_status, nil)}
+  end
+
+  def handle_event("restore_username", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("ask_to_play", _, socket) do
@@ -67,18 +70,18 @@ defmodule TrisWeb.LobbyLive do
       :waiting ->
         {:noreply, assign(socket, :queue_status, :waiting)}
 
-      {:matched, game_id, mark, my_name, opponent_name} ->
+      {:matched, game_id, mark, _my_name, _opponent_name} ->
         socket =
           socket
           |> assign(:queue_status, :matched)
-          |> push_navigate(to: "/game/#{game_id}?m=#{mark}&n=#{my_name}&o=#{opponent_name}")
+          |> push_navigate(to: "/game/#{game_id}?m=#{mark}")
 
         {:noreply, socket}
     end
   end
 
   def handle_event("play_with_bot", %{"difficulty" => difficulty}, socket) do
-    {:matched, game_id, mark, my_name, opponent_name} =
+    {:matched, game_id, mark, _my_name, _opponent_name} =
       Matchmaker.play_with_bot(
         self(),
         socket.assigns.username,
@@ -87,7 +90,7 @@ defmodule TrisWeb.LobbyLive do
 
     {:noreply,
      socket
-     |> push_navigate(to: "/game/#{game_id}?m=#{mark}&n=#{my_name}&o=#{opponent_name}")}
+     |> push_navigate(to: "/game/#{game_id}?m=#{mark}")}
   end
 
   def handle_event("change_name", _, socket) do
@@ -98,7 +101,8 @@ defmodule TrisWeb.LobbyLive do
      |> assign(:username, nil)
      |> assign(:show_form, true)
      |> assign(:queue_status, nil)
-     |> assign(:form, to_form(%{"username" => ""}, as: :user))}
+     |> assign(:form, to_form(%{"username" => ""}, as: :user))
+     |> push_event("save_username", %{username: ""})}
   end
 
   def handle_event("cancel_queue", _, socket) do
@@ -110,11 +114,11 @@ defmodule TrisWeb.LobbyLive do
     {:noreply, assign(socket, :queue_status, :waiting)}
   end
 
-  def handle_info({:matched, game_id, mark, my_name, opponent_name}, socket) do
+  def handle_info({:matched, game_id, mark, _my_name, _opponent_name}, socket) do
     socket =
       socket
       |> assign(:queue_status, :matched)
-      |> push_navigate(to: "/game/#{game_id}?m=#{mark}&n=#{my_name}&o=#{opponent_name}")
+      |> push_navigate(to: "/game/#{game_id}?m=#{mark}")
 
     {:noreply, socket}
   end
@@ -194,6 +198,8 @@ defmodule TrisWeb.LobbyLive do
             <% end %>
           </div>
         <% end %>
+
+        <div id="username-hook" phx-hook="UsernamePersistence" />
       </div>
     </Layouts.app>
     """

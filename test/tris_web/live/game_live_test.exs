@@ -100,7 +100,7 @@ defmodule TrisWeb.GameLiveTest do
       assert html =~ "tie!"
     end
 
-    test "return_to_lobby navigates to lobby with username", %{conn: conn, game_id: game_id} do
+    test "return_to_lobby navigates to lobby", %{conn: conn, game_id: game_id} do
       {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
 
       game_state = Tris.GameServer.get_state(game_id)
@@ -115,7 +115,7 @@ defmodule TrisWeb.GameLiveTest do
 
       view |> element("button", "Return to lobby") |> render_click()
 
-      assert_redirect(view, ~p"/?username=Alice")
+      assert_redirect(view, ~p"/")
     end
   end
 
@@ -251,6 +251,23 @@ defmodule TrisWeb.GameLiveTest do
 
       html = render(view)
       assert html =~ "Alice ran out of time!"
+    end
+  end
+
+  describe "nonexistent game" do
+    test "shows game not found page for invalid game ID", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/game/nonexistent-123")
+
+      assert has_element?(view, "div", "Game not found")
+      assert has_element?(view, "p", "This game does not exist or has already ended.")
+      assert has_element?(view, "p", "Redirecting to lobby...")
+    end
+
+    test "valid game still renders normally", %{conn: conn, game_id: game_id} do
+      {:ok, view, _html} = live(conn, ~p"/game/#{game_id}?m=x")
+
+      refute has_element?(view, "div", "Game not found")
+      assert has_element?(view, "span", "Your turn")
     end
   end
 end

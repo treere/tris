@@ -62,8 +62,11 @@ defmodule TrisWeb.LobbyLiveTest do
     assert has_element?(view, "#username-form")
   end
 
-  test "restores username from query param on mount", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/?username=Alice")
+  test "restores username from hook event", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    render_hook(view, "restore_username", %{username: "Alice"})
+
     assert has_element?(view, "button", "Ask to play")
     assert has_element?(view, "button", "Change name")
   end
