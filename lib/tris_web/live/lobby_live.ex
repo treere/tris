@@ -200,6 +200,12 @@ defmodule TrisWeb.LobbyLive do
         <% end %>
 
         <div id="username-hook" phx-hook="UsernamePersistence" />
+
+        <div class="mt-8 text-center">
+          <.link navigate="/credits" class="text-xs text-base-content/40 hover:text-base-content/60 transition-colors">
+            Credits
+          </.link>
+        </div>
       </div>
     </Layouts.app>
     """

@@ -70,4 +70,9 @@ defmodule TrisWeb.LobbyLiveTest do
     assert has_element?(view, "button", "Ask to play")
     assert has_element?(view, "button", "Change name")
   end
+
+  test "shows credits link", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert has_element?(view, "a", "Credits")
+  end
 end

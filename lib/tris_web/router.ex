@@ -18,6 +18,7 @@ defmodule TrisWeb.Router do
     pipe_through :browser
 
     live "/", LobbyLive, :index
+    live "/credits", CreditLive, :index
     live "/game/:id", GameLive, :show
   end
 
