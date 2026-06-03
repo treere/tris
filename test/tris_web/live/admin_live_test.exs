@@ -3,7 +3,7 @@ defmodule TrisWeb.AdminLiveTest do
 
   import Phoenix.LiveViewTest
 
-  @admin_password Application.compile_env(:tris, :admin_password, "admin")
+  defp admin_password, do: Application.get_env(:tris, :admin_password, "admin")
 
   describe "authentication" do
     test "redirects unauthenticated requests to auth prompt", %{conn: conn} do
@@ -15,7 +15,7 @@ defmodule TrisWeb.AdminLiveTest do
     test "renders admin dashboard with valid credentials", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{@admin_password}"))
+        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{admin_password()}"))
 
       {:ok, _view, html} = live(conn, ~p"/admin")
       assert html =~ "Admin Dashboard"
@@ -35,7 +35,7 @@ defmodule TrisWeb.AdminLiveTest do
     test "shows stat cards", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{@admin_password}"))
+        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{admin_password()}"))
 
       {:ok, _view, html} = live(conn, ~p"/admin")
       assert html =~ "Users Online"
@@ -47,7 +47,7 @@ defmodule TrisWeb.AdminLiveTest do
     test "shows empty state when no games are active", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{@admin_password}"))
+        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{admin_password()}"))
 
       {:ok, _view, html} = live(conn, ~p"/admin")
       assert html =~ "No active games"
@@ -56,7 +56,7 @@ defmodule TrisWeb.AdminLiveTest do
     test "shows game type breakdown", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{@admin_password}"))
+        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{admin_password()}"))
 
       {:ok, _view, html} = live(conn, ~p"/admin")
       assert html =~ "Human vs Human"
@@ -66,7 +66,7 @@ defmodule TrisWeb.AdminLiveTest do
     test "shows player stats", %{conn: conn} do
       conn =
         conn
-        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{@admin_password}"))
+        |> put_req_header("authorization", "Basic " <> Base.encode64("admin:#{admin_password()}"))
 
       {:ok, _view, html} = live(conn, ~p"/admin")
       assert html =~ "In Lobby"

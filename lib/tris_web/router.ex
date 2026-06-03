@@ -15,9 +15,7 @@ defmodule TrisWeb.Router do
   end
 
   pipeline :admin_auth do
-    plug TrisWeb.Plugs.AdminAuth,
-      username: "admin",
-      password: Application.compile_env(:tris, :admin_password, "admin")
+    plug TrisWeb.Plugs.AdminAuth, username: "admin"
   end
 
   scope "/admin", TrisWeb do

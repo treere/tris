@@ -4,6 +4,7 @@ defmodule TrisWeb.Plugs.AdminAuth do
   def init(opts), do: opts
 
   def call(conn, opts) do
-    BasicAuth.basic_auth(conn, opts)
+    password = Application.get_env(:tris, :admin_password, "admin")
+    BasicAuth.basic_auth(conn, Keyword.put(opts, :password, password))
   end
 end

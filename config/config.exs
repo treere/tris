@@ -8,8 +8,7 @@
 import Config
 
 config :tris,
-  generators: [timestamp_type: :utc_datetime],
-  admin_password: System.get_env("ADMIN_PASSWORD", "admin")
+  generators: [timestamp_type: :utc_datetime]
 
 # Configure the endpoint
 config :tris, TrisWeb.Endpoint,
